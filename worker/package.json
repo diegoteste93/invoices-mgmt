@@ -1,0 +1,12 @@
+{
+  "name": "invoices-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/worker.js"
+  },
+  "dependencies": {
+    "bullmq": "^5.16.0",
+    "ioredis": "^5.4.1"
+  }
+}
