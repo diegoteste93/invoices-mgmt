@@ -43,7 +43,7 @@ export class InvoicesService {
     const confidence = Math.max(parsed.confidence, ai.confidence);
 
     await this.prisma.extractionResult.create({ data: { invoiceId: id, provider: 'parser', confidence: parsed.confidence, rawJson: parsed as any } });
-    await this.prisma.aiAnalysis.create({ data: { invoiceId: id, provider: ai.provider, confidence: ai.confidence, justification: ai.justification, structuredData: ai as any } });
+    await this.prisma.aIAnalysis.create({ data: { invoiceId: id, provider: ai.provider, confidence: ai.confidence, justification: ai.justification, structuredData: ai as any } });
     await this.prisma.allocationResult.create({ data: { invoiceId: id, allocationType: 'percentage', split: allocation.split as any, decisionSource: allocation.source, ruleId: allocation.ruleId } });
 
     const reviewRequired = confidence < Number(process.env.CONFIDENCE_THRESHOLD || 0.75) || !ai.suggestedCostCenterCode;
