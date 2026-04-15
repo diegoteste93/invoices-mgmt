@@ -1,8 +1,8 @@
 import { apiGet } from '../../lib/api';
 
 export default async function RegrasPage() {
-  const classRules = await apiGet<any[]>('/rules/classification');
-  const allocRules = await apiGet<any[]>('/rules/allocation');
+  const classRules = await apiGet<any[]>('/rules/classification', []);
+  const allocRules = await apiGet<any[]>('/rules/allocation', []);
   return (
     <section className="space-y-4">
       <h2 className="text-2xl font-semibold">Regras</h2>

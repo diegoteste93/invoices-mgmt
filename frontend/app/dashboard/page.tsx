@@ -1,7 +1,7 @@
 import { apiGet } from '../../lib/api';
 
 export default async function DashboardPage() {
-  const data = await apiGet<any>('/dashboard/summary');
+  const data = await apiGet<any>('/dashboard/summary', { totalInvoices: 0, totalMonthAmount: 0, pendingReview: 0, withoutCostCenter: 0, alerts: [{ type: 'warning', message: 'Backend indisponível no momento.' }] });
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-semibold">Dashboard</h2>

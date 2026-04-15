@@ -1,7 +1,7 @@
 import { apiGet } from '../../lib/api';
 
 export default async function RateioPage() {
-  const rules = await apiGet<any[]>('/rules/allocation');
+  const rules = await apiGet<any[]>('/rules/allocation', []);
   return (
     <section>
       <h2 className="mb-4 text-2xl font-semibold">Rateio</h2>

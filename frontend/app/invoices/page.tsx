@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { apiGet } from '../../lib/api';
 
 export default async function InvoicesPage() {
-  const invoices = await apiGet<any[]>('/invoices');
+  const invoices = await apiGet<any[]>('/invoices', []);
   return (
     <section>
       <h2 className="mb-4 text-2xl font-semibold">Invoices</h2>

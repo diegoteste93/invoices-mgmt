@@ -1,17 +1,52 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const publicApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const internalApiUrl = process.env.API_INTERNAL_URL || publicApiUrl;
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Erro de API');
-  return res.json();
+function getApiUrl() {
+  return typeof window === 'undefined' ? internalApiUrl : publicApiUrl;
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error('Erro de API');
-  return res.json();
+async function requestWithRetry(input: string, init?: RequestInit, retries = 5): Promise<Response> {
+  let lastError: unknown;
+  for (let i = 0; i < retries; i++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const res = await fetch(input, { ...init, cache: 'no-store', signal: controller.signal });
+      return res;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 400 * (i + 1)));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw lastError;
+}
+
+export async function apiGet<T>(path: string, fallback?: T): Promise<T> {
+  try {
+    const res = await requestWithRetry(`${getApiUrl()}${path}`);
+    if (!res.ok) throw new Error(`Erro de API: ${res.status}`);
+    return res.json();
+  } catch (error) {
+    if (fallback !== undefined) return fallback;
+    throw error;
+  }
+}
+
+export async function apiPost<T>(path: string, body: unknown, fallback?: T): Promise<T> {
+  try {
+    const res = await requestWithRetry(`${getApiUrl()}${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) throw new Error(`Erro de API: ${res.status}`);
+    return res.json();
+  } catch (error) {
+    if (fallback !== undefined) return fallback;
+    throw error;
+  }
 }

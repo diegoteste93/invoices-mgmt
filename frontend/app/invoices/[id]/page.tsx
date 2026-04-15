@@ -1,7 +1,7 @@
 import { apiGet, apiPost } from '../../../lib/api';
 
 export default async function InvoiceDetail({ params }: { params: { id: string } }) {
-  const invoice = await apiGet<any>(`/invoices/${params.id}`);
+  const invoice = await apiGet<any>(`/invoices/${params.id}`, { id: params.id, status: 'indisponível', currency: 'USD', amount: 0, rawText: 'Backend indisponível.', confidence: 0, vendor: null });
 
   return (
     <section className="space-y-4">

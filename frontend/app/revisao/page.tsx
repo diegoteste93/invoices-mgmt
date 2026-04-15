@@ -1,7 +1,7 @@
 import { apiGet } from '../../lib/api';
 
 export default async function RevisaoPage() {
-  const tasks = await apiGet<any[]>('/review/queue');
+  const tasks = await apiGet<any[]>('/review/queue', []);
   return (
     <section>
       <h2 className="mb-4 text-2xl font-semibold">Fila de Revisão</h2>
