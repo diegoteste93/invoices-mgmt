@@ -1,0 +1,51 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: invoices
+      POSTGRES_PASSWORD: invoices
+      POSTGRES_DB: invoices
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://invoices:invoices@postgres:5432/invoices?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3001
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3001:3001"
+
+  worker:
+    build: ./worker
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
+
+  frontend:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3001
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
