@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  admin
+  financeiro
+  auditor
+}
+
+enum InvoiceStatus {
+  received
+  parsing
+  parsed
+  classified
+  review_required
+  allocated
+  reconciled
+  error
+}
+
+enum ReviewStatus {
+  pending
+  in_review
+  resolved
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         RoleName
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  name      RoleName @unique
+  createdAt DateTime @default(now())
+}
+
+model CostCenter {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  area        String?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Vendor {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  domain    String?
+  createdAt DateTime @default(now())
+  aliases   VendorAlias[]
+  invoices  Invoice[]
+}
+
+model VendorAlias {
+  id       String @id @default(cuid())
+  alias    String
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+}
+
+model Invoice {
+  id                  String        @id @default(cuid())
+  externalId          String?
+  vendorId            String?
+  vendor              Vendor?       @relation(fields: [vendorId], references: [id])
+  competency          DateTime?
+  amount              Decimal       @db.Decimal(14, 2)
+  currency            String        @default("USD")
+  status              InvoiceStatus @default(received)
+  sourceType          String
+  confidence          Float         @default(0)
+  rawText             String?
+  rawJson             Json?
+  costCenterCode      String?
+  suggestedAllocation Json?
+  processedAt         DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  items               InvoiceItem[]
+  extractionResults   ExtractionResult[]
+  ocrResults          OCRResult[]
+  aiAnalyses          AIAnalysis[]
+  reviewTasks         ReviewTask[]
+  allocationResults   AllocationResult[]
+  reconciliations     Reconciliation[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  description String
+  quantity    Float?
+  unitPrice   Decimal? @db.Decimal(14, 2)
+  total       Decimal? @db.Decimal(14, 2)
+}
+
+model InvoiceSource {
+  id           String   @id @default(cuid())
+  invoiceId     String?
+  sourceType    String
+  externalId    String?
+  processingStep String
+  rawJson       Json?
+  createdAt     DateTime @default(now())
+}
+
+model EmailMessage {
+  id             String   @id @default(cuid())
+  messageId      String   @unique
+  fromEmail      String
+  toEmail        String
+  subject        String
+  sentAt         DateTime
+  snippet        String?
+  body           String?
+  status         String   @default("received")
+  createdAt      DateTime @default(now())
+  attachments    EmailAttachment[]
+}
+
+model EmailAttachment {
+  id             String   @id @default(cuid())
+  emailMessageId String
+  emailMessage   EmailMessage @relation(fields: [emailMessageId], references: [id])
+  fileName       String
+  mimeType       String
+  path           String
+  size           Int
+}
+
+model UploadedFile {
+  id         String   @id @default(cuid())
+  fileName   String
+  path       String
+  mimeType   String
+  sourceType String
+  createdAt  DateTime @default(now())
+}
+
+model ExtractionResult {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  provider    String
+  confidence  Float
+  rawJson     Json
+  createdAt   DateTime @default(now())
+}
+
+model OCRResult {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  provider    String
+  confidence  Float
+  rawText     String
+  createdAt   DateTime @default(now())
+}
+
+model AIAnalysis {
+  id            String   @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id])
+  provider       String
+  confidence     Float
+  justification  String
+  structuredData Json
+  createdAt      DateTime @default(now())
+}
+
+model ClassificationRule {
+  id                 String   @id @default(cuid())
+  name               String
+  ruleType           String
+  condition          String
+  action             Json
+  confidenceBoost    Float    @default(0)
+  requireReview      Boolean  @default(false)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+}
+
+model AllocationRule {
+  id           String   @id @default(cuid())
+  name         String
+  ruleType     String
+  condition    String
+  allocation   Json
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model AllocationResult {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id])
+  ruleId       String?
+  allocationType String
+  split        Json
+  decisionSource String
+  createdAt    DateTime @default(now())
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  vendorName   String
+  amount       Decimal  @db.Decimal(14,2)
+  currency     String
+  paidAt       DateTime
+  reference    String?
+  source       String
+  rawJson      Json?
+  createdAt    DateTime @default(now())
+  reconciliations Reconciliation[]
+}
+
+model Reconciliation {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id])
+  paymentId    String
+  payment      Payment  @relation(fields: [paymentId], references: [id])
+  score        Float
+  status       String
+  notes        String?
+  createdAt    DateTime @default(now())
+}
+
+model ReviewTask {
+  id           String      @id @default(cuid())
+  invoiceId    String
+  invoice      Invoice     @relation(fields: [invoiceId], references: [id])
+  status       ReviewStatus @default(pending)
+  reason       String
+  assignedTo   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  entityType  String
+  entityId    String
+  action      String
+  details     Json?
+  createdAt   DateTime @default(now())
+}
+
+model Setting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model JobExecution {
+  id           String   @id @default(cuid())
+  jobName      String
+  status       String
+  attempts     Int      @default(0)
+  errorMessage String?
+  startedAt    DateTime @default(now())
+  endedAt      DateTime?
+}
